@@ -7,15 +7,15 @@ This repository contains work concerning the final graduation project
 
 ## Demo
 <div align="center">
-   <video src="https://github.com/user-attachments/assets/de52d622-7b21-4e9b-bd05-cf3033f22e98"></video>
+   <img src="https://github.com/user-attachments/assets/de52d622-7b21-4e9b-bd05-cf3033f22e98"></video>
 </div>
 
 <div align="center">
-   <video src="https://github.com/user-attachments/assets/0779fb0b-918a-4743-9635-bf5d5efb4b8c"></video>
+   <img src="https://github.com/user-attachments/assets/0779fb0b-918a-4743-9635-bf5d5efb4b8c"></video>
 </div>
 
 <div align="center">
-   <video src="https://github.com/user-attachments/assets/f18cbaf6-58f8-4c7e-9398-83b3af1d9c6f"></video>
+   <img src="https://github.com/user-attachments/assets/f18cbaf6-58f8-4c7e-9398-83b3af1d9c6f"></video>
 </div>
 
 ## Technologies
