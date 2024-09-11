@@ -6,16 +6,24 @@ This repository contains work concerning the final graduation project
 > The goal is to automate the semi-automated process of detecting vulnerabilities on iOS applications.
 
 ## Demo
+
+### First: Launch the tool, then select the directory that contains the iOS mobile applications to be analyzed (in this case 2 iOS applications exist in the selected directory).
 <div align="center">
-   <img src="https://github.com/user-attachments/assets/de52d622-7b21-4e9b-bd05-cf3033f22e98"></video>
+   <img width="514" alt="demo1" src="https://github.com/user-attachments/assets/ba02b53e-79b0-4b42-91c0-14a5f4661768">
+</div>
+
+### Second: Run the analysis (including: binary extraction, string analysis, decompilation, and contamination analysis).
+<div align="center">
+   <img width="514" alt="demo2" src="https://github.com/user-attachments/assets/fe9fb096-be86-42ab-a5ba-7f48109ed2c0">
+</div>
+
+### Finally: View the analysis report
+<div align="center">
+   <img width="514" alt="demo3" src="https://github.com/user-attachments/assets/c975ad6b-0707-4627-b190-0a3ffed8c437">
 </div>
 
 <div align="center">
-   <img src="https://github.com/user-attachments/assets/0779fb0b-918a-4743-9635-bf5d5efb4b8c"></video>
-</div>
-
-<div align="center">
-   <img src="https://github.com/user-attachments/assets/f18cbaf6-58f8-4c7e-9398-83b3af1d9c6f"></video>
+   <img width="514" alt="demo4" src="https://github.com/user-attachments/assets/17a4d0e4-18fa-4c6c-a3f7-1dda4257dac0">
 </div>
 
 ## Technologies
