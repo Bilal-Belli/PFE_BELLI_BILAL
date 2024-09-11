@@ -1,11 +1,13 @@
 import os, subprocess, threading, json
 import xml.etree.ElementTree as ET
 import tkinter as tk
+import validators
 
 from tkinter import filedialog
 from regexAnalysis import regexDirectoryFiles
 from transformationIR import main
 from taintAnalysis import taintAnalysisMain
+from extractBinaries import extractBinaryFile
 
 # Variables Globales
     # selectedDirectory
@@ -28,9 +30,17 @@ def askDirectory():
     selectedDirectory = filedialog.askdirectory()
     if selectedDirectory:
         directory_var.set(selectedDirectory)
-        # Obtenir la liste des fichiers et des répertoires dans le chemin sélectionné
+        # récupération des executables
         entries = os.listdir(selectedDirectory)
-        filesEntries = [entry for entry in entries if os.path.isfile(os.path.join(selectedDirectory, entry))]  # Filtrer uniquement les fichiers
+        filesEntries = [entry for entry in entries if os.path.isfile(os.path.join(selectedDirectory, entry))]  # Filtrer uniquement les fichiers .ipa
+        for fileInDirectory in filesEntries:
+            fileFullName = selectedDirectory+"/"+fileInDirectory
+            extractBinaryFile(fileFullName)
+
+        # Obtenir la liste des fichiers executables extraits avec success
+        entries = os.listdir(selectedDirectory)
+        filesEntries = [entry for entry in entries if os.path.isfile(os.path.join(selectedDirectory, entry))]  # Recensement pour une deusieme fois
+
         NumbreOfFiles = len(filesEntries) 
         makeTextEditable()
         textarea.insert(tk.END, f"Nombre de Fichiers: {NumbreOfFiles}\n")
@@ -79,7 +89,7 @@ def getStrings():
 # cette fonction utilise un autre script regexAnalysis.py, traverse la décompilation et applique des expressions régulières pour extraire les informations
 def analyseStrings():
     createDirectory(selectedDirectory,"analysis")
-    regexDirectoryFiles(os.path.join(selectedDirectory,"string"), os.path.join(selectedDirectory, "analysis", 'regexAnalysisResults.json'))
+    regexDirectoryFiles(os.path.join(selectedDirectory,"string"), os.path.join(selectedDirectory, "analysis", 'regexAnalysisResults.json'), filesEntries)
 
 # cette fonction fait la transformation du code assembleur vers la representation intermédière (XML)
 def decompilation():
@@ -92,7 +102,13 @@ def decompilation():
         # pour creer le fichier de RI
         xmlDestinationFileName = file + ".xml"
         xmlDestinationFilePath = os.path.join(selectedDirectory, "decompilation", xmlDestinationFileName)
+        makeTextEditable()
+        textarea.insert(tk.END, f"Décompilation de {file} (en cours)\n", "progress")
+        makeTextReadonly()
         main(filePath, disassemblyFilePath, xmlDestinationFilePath)
+        makeTextEditable()
+        textarea.insert(tk.END, f"Décompilation de {file} (terminé)\n", "success")
+        makeTextReadonly()
 
 # l'application de l'analyse de contamunations
 def analyseIR():
@@ -102,71 +118,23 @@ def analyseIR():
         xmlDestinationFileName = file + ".xml"
         xmlDestinationFilePath = os.path.join(selectedDirectory, "decompilation", xmlDestinationFileName)
         result = taintAnalysisMain(xmlDestinationFilePath, file)
-        if result:
-            allResults.update(result)
+        # if result:
+            # allResults[file] = result
+        allResults[file] = result
     with open(jsonFilePath, 'w') as jsonFile:
         json.dump(allResults, jsonFile, indent=2)
-
-# cette fonction sera utiliser pour compter le nombre d'occurences des elements du vecteur fonctions sencibles
-def countVectorOccurrencesForXML(array, filePath):
-    count = 0
-    names_found = set()  # pour garder une trace des noms trouvés dans le fichier
-    tree = ET.parse(filePath)
-    root = tree.getroot()
-    # Parcourez toutes les balises <Call> et obtenez l'attribut « func »
-    for call in root.iter('Call'):
-        func_name = call.get('func')
-        if func_name and func_name in array and func_name not in names_found:
-            count += 1
-            names_found.add(func_name)
-    return count
-
-# analyse si il existe beaucoup de fonctions sencibles qui tentent d'avoir un maximum des informations
-def analyseMethods():
-    suspectFunctionsArray = ["UITextField","UITextView","UIDocumentPickerViewController","documentPicker","imagePickerController", "pickerView","dataTask","Alamofire","request","contents","contentsOfDirectory","stringWithContentsOfURL:encoding","initWithContentsOfFile:encoding:error:", "fork", 
-    "contentsOfDirectory","contents","NotificationCenter","addObserver","CoreLocation","locationManager", "UIAlertController","Pasteboard","UIPasteboard.general.string","NSManagedObjectContext","existingObject","AVCapture","AVCaptureVideoDataOutput","captureOutput","AVCaptureAudioDataOutput",
-    "Realm.write","UIApplication","evaluateJavaScript","UserDefaults","UITextField","placeholder","UITextView","text","attributedText","UIDatePicker","date","UIAlertView","textFieldAtIndex:","UIPickerView","selectedRowInComponent:","initWithContentsOfURL:encoding","Realm.objects", "popen", 
-    "titleForRow:forComponent","NSFileManager","contentsAtPath:","contentsOfDirectoryAtPath:error","fileExistsAtPath","NSData","dataWithContentsOfFile","dataWithContentsOfURL:","initWithContentsOfFile:", "initWithContentsOfURL","NSString","stringWithContentsOfFile:encoding", "dlsym", "system",
-    "NSURLSession","dataTaskWithURL:","dataTaskWithRequest","downloadTaskWithURL","downloadTaskWithRequest:","NSURLConnection","sendAsynchronousRequest:queue:completionHandler", "sendSynchronousRequest:returningResponse","NSStream","inputStreamWithURL","UIPasteboard","NSManagedObjectContext",
-    "GET:parameters:success:failure:","POST:parameters:success:failure","PUT:parameters:success:failure","DELETE:parameters:success:failure","NSUserDefaults","objectForKey","stringForKey", "arrayForKey","dictionaryForKey","dataForKey:","SecItemCopyMatching","SecItemAdd","SecItemUpdate","Clipboard",
-    "executeFetchRequest:error:","fetchRequestFromTemplateWithName:substitutionVariables","FMDB","executeQuery","executeQuery:withArgumentsInArray:","NSNotificationCenter","addObserver:selector:name:object:","addObserverForName:object:queue:usingBlock","NSNotification","userInfo","UIApplication",
-    "NSProcessInfo","environment","arguments","UIDevice","name","model","systemName","systemVersion","CLLocationManager","location","startUpdatingLocation","startMonitoringSignificantLocationChanges","inputStreamWithFileAtPath","initWithURL","initWithFileAtPath","AFNetworking","objc_msgSend",  
-    "requestLocation","requestWhenInUseAuthorization","requestAlwaysAuthorization","UIImagePickerController","delegate","sourceType","mediaTypes","allowsEditing","AVCaptureDevice","devices","defaultDeviceWithMediaType","set", "setPersistentDomain", "FileManager.createFile", "objc_msgSendSuper",
-    "FileManager.removeItem", "FileManager.contents", "SecItemAdd", "SecItemUpdate", "SecItemCopyMatching", "SecItemDelete", "URLSession.dataTask","AVAudioPlayer.play","NSXPCConnection.synchronousRemoteObjectProxy", "NSXPCConnection.exportedObject","FileManager.copyItem", "FileManager.moveItem",
-    "URLSession.uploadTask", "URLSession.downloadTask", "URLSession.streamTask", "URLSessionWebSocketTask.send", "URLSessionWebSocketTask.receive", "FileHandle.readDataToEndOfFile", "FileHandle.readData", "FileHandle.write", "FileHandle.seek", "NSXPCConnection.remoteObjectProxy",  "dlopen", 
-    "NSXPCConnection.exportedInterface", "UIAlertController", "UIAlertController.init", "UIAlertAction.init", "CCCrypt", "CCCryptorCreate", "CCCryptorUpdate", "CCCryptorFinal", "CryptoKit", "SHA256.hash", "SHA512.hash", "AES.GCM.seal", "AES.GCM.open", "CoreData", "NSManagedObjectContext.save", 
-    "NSManagedObjectContext.fetch", "NSManagedObjectContext.delete", "NSPersistentContainer.loadPersistentStores", "sqlite3_exec", "sqlite3_prepare_v2", "sqlite3_step", "sqlite3_finalize", "WKWebView.load", "WKWebView.loadHTMLString", "WKWebView.loadFileURL", "UNUserNotificationCenter.add", 
-    "UNUserNotificationCenter.removePendingNotificationRequests", "UNUserNotificationCenter.removeDeliveredNotifications", "UIPasteboard.general.setItems", "openURL:","canOpenURL:","NSOpenPanel","URLs","beginWithCompletionHandler","NSURLConnection sendAsynchronousRequest:queue:completionHandler:",
-    "UIPasteboard.general.setValue", "UIPasteboard.general.setString", "UIPasteboard.general.string", "CLLocationManager.startUpdatingLocation", "CLLocationManager.stopUpdatingLocation", "CLLocationManager.requestWhenInUseAuthorization", "CLLocationManager.requestAlwaysAuthorization", 
-    "AVAudioRecorder.record", "AVCaptureSession.startRunning", "AVCaptureSession.stopRunning", "NSURLSession", "NSURLRequest", "NSURLConnection", "CFNetwork", "+[NSStream getStreamsToHostWithName:port:inputStream:outputStream:]","UIAlertView", "UIActionSheet", "UIPasteboard","NSURLSessionDownloadTask",
-    "+[NSURLConnection sendSynchronousRequest:returningResponse:error:]", "+[NSURLConnection connectionWithRequest:delegate:]", "-[NSData initWithContentsOfFile:]", "-[NSString initWithContentsOfFile:]","exec", "CCCrypt", "SecKeyEncrypt", "SecKeyDecrypt", "SecItemAdd", "SecItemUpdate", 
-    "-[NSDictionary initWithContentsOfFile:]", "-[NSArray initWithContentsOfFile:]", "-[NSFileManager createFileAtPath:contents:attributes:]", "-[NSFileManager copyItemAtPath:toPath:error:]",  "+[SAMKeychain setPasswordObject:forService:account:]","+[SAMKeychain setPasswordData:forService:account:]",
-    "-[NSFileManager moveItemAtPath:toPath:error:]", "-[NSFileManager removeItemAtPath:error:]", "-[NSUserDefaults setObject:forKey:]", "-[NSUserDefaults setInteger:forKey:]", "-[NSUserDefaults setBool:forKey:]", "+[SAMKeychain setPassword:forService:account:]", "NSURLSessionUploadTask",  
-    "-[UIApplication openURL:]", "-[UIApplication canOpenURL:]", "-[UIWebView loadRequest:]", "-[WKWebView loadRequest:]", "sqlite3_exec", "sqlite3_prepare_v2", "FMDatabase executeUpdate:", "FMDatabase executeQuery:","+[NSPropertyListSerialization dataWithPropertyList:format:options:error:]",
-    "SecItemCopyMatching", "SecItemDelete", "NSLog", "printf", "fprintf", "CFShow", "NSURL URLWithString:", "NSURL fileURLWithPath:", "-[NSKeyedArchiver archivedDataWithRootObject:]", "+[NSJSONSerialization dataWithJSONObject:options:error:]","NSURLSessionDataTask", 
-    "JSContext evaluateScript:", "-[JSContext evaluateScript:]", "-[WKWebView evaluateJavaScript:completionHandler:]", "UITextField text", "UITextView text", "-[UIWebView stringByEvaluatingJavaScriptFromString:]" ]
-    folder_path = os.path.join(selectedDirectory, "decompilation")
-    result = {}
-    for filename in os.listdir(folder_path):
-        if filename.endswith(".xml"):
-            filePath = os.path.join(folder_path, filename)
-            
-            counts = countVectorOccurrencesForXML(suspectFunctionsArray, filePath)
-            
-            result[os.path.splitext(filename)[0]] = counts
-    with open(os.path.join(selectedDirectory, "analysis", "functionsAnalysisResults.json"), 'w') as json_file:
-        json.dump(result, json_file, indent=4)
 
 # Cette fonction est le declencheur des opérations (Button "Analyser")
 def launchAnalysis():
     makeTextEditable()
+    textarea.insert(tk.END, f"Extraction des fichiers binaires\n", "progress")
     textarea.insert(tk.END, f"Extraction de chaînes (en cours)\n", "progress")
     makeTextReadonly()
 
     getStrings()
 
     makeTextEditable()
-    textarea.insert(tk.END, f"Extraction de chaînes (finie)\n", "success")
+    textarea.insert(tk.END, f"Extraction de chaînes (terminé)\n", "success")
     textarea.insert(tk.END, f"Analyse des Addresses IP (en cours)\n", "progress")
     textarea.insert(tk.END, f"Analyse des liens (en cours)\n", "progress")
     makeTextReadonly()
@@ -174,23 +142,22 @@ def launchAnalysis():
     analyseStrings()
 
     makeTextEditable()
-    textarea.insert(tk.END, f"Analyse des Addresses IP (finie)\n", "success")
-    textarea.insert(tk.END, f"Analyse des liens (finie)\n", "success")
+    textarea.insert(tk.END, f"Analyse des Addresses IP (terminé)\n", "success")
+    textarea.insert(tk.END, f"Analyse des liens (terminé)\n", "success")
     textarea.insert(tk.END, f"Décompilation (en cours)\n", "progress")
     makeTextReadonly()
 
     decompilation()
     
     makeTextEditable()
-    textarea.insert(tk.END, f"Décompilation (finie)\n", "success")
+    textarea.insert(tk.END, f"Décompilation (terminé)\n", "success")
     textarea.insert(tk.END, f"Analyse des fonctions, methodes (en cours)\n", "progress")
     makeTextReadonly()
 
     analyseIR()
-    analyseMethods()
 
     makeTextEditable()
-    textarea.insert(tk.END, f"Analyse des fonctions, methodes (finie)\n", "success")
+    textarea.insert(tk.END, f"Analyse des fonctions, methodes (terminé)\n", "success")
     makeTextReadonly()
 
     generateReport()
@@ -222,25 +189,30 @@ def generateReport():
         first_json = json.load(f)
     with open(os.path.join(selectedDirectory, "analysis", "taintAnalysisResults.json"), 'r') as f:
         second_json = json.load(f)
-    with open(os.path.join(selectedDirectory, "analysis", "functionsAnalysisResults.json"), 'r') as f:
-        third_json = json.load(f)
     with open(os.path.join(selectedDirectory, "analysis", "REPORT.html"), 'w') as f:
-        f.write('<html>\n<head>\n<title>ANALYSIS REPORT</title>\n</head>\n<body>\n')
-        for key in first_json:
+        f.write('<html>\n<head>\n<title>RAPPORT D\'ANALYSE</title>\n</head>\n<body>\n')
+        for key in second_json:
             f.write(f'<h2>{key}</h2>\n')
             f.write('<table border="1">\n')
-            f.write('<tr><th>Attribute</th><th>Value</th></tr>\n')
-            for attribute, value in first_json[key].items():
-                f.write(f'<tr><td>{attribute}</td><td>{value}</td></tr>\n')
+            f.write('<tr><th>Attribut</th><th>Valeurs</th></tr>\n')
             if key in second_json and isinstance(second_json[key], list):
-                f.write('<tr><td>vulnerabilites</td><td><ul>\n')
-                for func_name in second_json[key]:
-                    f.write(f'<li>{func_name}</li>\n')
+                f.write('<tr><td>Résultats de l\'analyse des contaminations</td><td><ol>\n')
+                if not second_json[key]:
+                    f.write('<p style="color: green;">Aucun comportement malveillant détecté</p></ol></td></tr>\n')
+                else:
+                    for func_name in second_json[key]:
+                        f.write(f'<li><p style="color: red;">{func_name}</p></li>\n')
+                    f.write('</ol></td></tr>\n')
+            for attribute, values in first_json[key].items():
+                f.write(f'<tr><td>{attribute}</td><td><ul>\n')
+                if attribute == "Liens":
+                    for value in values:
+                        if validators.url(value):
+                            f.write(f'<li>{value}</li>\n')
+                else:
+                    for value in values:
+                        f.write(f'<li>{value}</li>\n')
                 f.write('</ul></td></tr>\n')
-            if key in third_json:
-                f.write(f'<tr><td>number_of_suspect_functions</td><td>{second_json[key]}</td></tr>\n')
-            else:
-                f.write('<tr><td>number_of_suspect_functions</td><td>0</td></tr>\n')
             f.write('</table>\n')
         f.write('</body>\n</html>')
 
@@ -265,7 +237,7 @@ root.iconbitmap("logo.ico")
 # Variable pour stocker le répertoire sélectionné
 directory_var = tk.StringVar()
 
-directory_button = tk.Button(root, text="Sélectionnez le répertoire 🗀", command=askDirectory)
+directory_button = tk.Button(root, text="Sélectionner un dossier 🗀", command=askDirectory)
 directory_button.grid(row=0, column=0, pady=1)
 
 directory_entry = tk.Entry(root, textvariable=directory_var, state="readonly", width=60)

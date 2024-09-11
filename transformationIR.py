@@ -82,7 +82,7 @@ def getFirstLastAddresses(lines):
     except IndexError as e:
         print("error when getting first and last addresses | index out of range")
     except Exception as e:
-        print("error when getting first and last addresses")
+        print("error when getting first and last addresses : "+e)
 # #############################
 # This function allows to write updates on a json file
 def updateInfosJsonFile(objects, infosJsonFile):
@@ -124,7 +124,8 @@ def demangleObjc(mangledName):
 # This function demangles Swift names
 def demangleSwift(mangledName):
     try:
-        result = subprocess.run(['swift-demangle', '--simplified', '--compact'], input=mangledName.encode(), capture_output=True, check=True)
+        result = subprocess.run('swift-demangle', input=mangledName.encode(), capture_output=True, check=True)
+        # result = subprocess.run(['swift-demangle', '--simplified', '--compact'], input=mangledName.encode(), capture_output=True, check=True)
         demangledName = result.stdout.decode().strip()
         # demangledName = re.sub(r'\(.*$', '', demangledName)
         # demangledName = demangledName.replace(" ", "_").replace("<", "_").replace(">", "_")
@@ -511,6 +512,9 @@ def separateFunction2Blocks(lines,minbound,maxbound,variables):
                     branch_addresses.add(next_address)  # Address of the next line
                 operands = parts[2].strip().split(', ')
                 # example : @ cbz x12, 0x1320990
+                if not operands[1].startswith('0x'):
+                    # there is no target address in the instruction
+                    continue
                 target_address = operands[1].replace('0x', '')  # Remove '0x' prefix
                 if (int(target_address,16)>=minbound and int(target_address,16)<=maxbound):
                     branch_following_addresses.add(target_address)
@@ -525,6 +529,9 @@ def separateFunction2Blocks(lines,minbound,maxbound,variables):
                         branch_addresses.add(next_address)  # Address of the next line
                     operands = parts[2].strip().split(', ')
                     # example : @ tbz x12, #0, 0x1320990
+                    if not operands[2].startswith('0x'):
+                        # there is no target address in the instruction
+                        continue
                     target_address = operands[2].replace('0x', '')  # Remove '0x' prefix
                     if (int(target_address,16)>=minbound and int(target_address,16)<=maxbound):
                         branch_following_addresses.add(target_address)
@@ -573,22 +580,22 @@ def constructXMLfunction(nomFonct, startAdress, blocks, control_flow, variables,
         block_XML = constructXMLbloc(block, variables, listeArguments, retour)
         # check if the bloc is not empty (it must have childrens)
         if len(block_XML) != 0:
-	        if (id in control_flow):
-	            controlFlow_XML = ET.Element("ControlFlow")
-	            match control_flow[id]["type"]:
-	                case "suite_logique":
-	                    controlFlow_XML.set('type', "suite_logique")
-	                    controlFlow_XML.set('next', control_flow[id]["suivante"])
-	                case "condition":
-	                    controlFlow_XML.set('type', "conditional")
-	                    controlFlow_XML.set('condition', control_flow[id]["condition"])
-	                    controlFlow_XML.set('true', control_flow[id]["true"])
-	                    controlFlow_XML.set('false', control_flow[id]["false"])
-	                case "incondition":
-	                    controlFlow_XML.set('type', "inconditional")
-	                    controlFlow_XML.set('target', control_flow[id]["target"])
-	            block_XML.append(controlFlow_XML)
-	        function.append(block_XML)
+            if (id in control_flow):
+                controlFlow_XML = ET.Element("ControlFlow")
+                match control_flow[id]["type"]:
+                    case "suite_logique":
+                        controlFlow_XML.set('type', "suite_logique")
+                        controlFlow_XML.set('next', control_flow[id]["suivante"])
+                    case "condition":
+                        controlFlow_XML.set('type', "conditional")
+                        controlFlow_XML.set('condition', control_flow[id]["condition"])
+                        controlFlow_XML.set('true', control_flow[id]["true"])
+                        controlFlow_XML.set('false', control_flow[id]["false"])
+                    case "incondition":
+                        controlFlow_XML.set('type', "inconditional")
+                        controlFlow_XML.set('target', control_flow[id]["target"])
+                block_XML.append(controlFlow_XML)
+            function.append(block_XML)
     return function
 # #############################
 # This function takes data flow logic, then construct the XML IR of a given bloc 
@@ -626,6 +633,10 @@ def constructXMLbloc(block, variables, listeArguments, retour):
                 else:
                     if match_2:
                         nom_fonction = match_2.group(1)
+                        if nom_fonction.startswith("_$") or nom_fonction.startswith("_T"):
+                            nom_fonction = demangleSwift(nom_fonction)
+                        else:
+                            nom_fonction = demangleObjc(nom_fonction)
                         instruction_XML = ET.Element("Call")
                         instruction_XML.set('func', nom_fonction)
                         if (parts[0] in listeArguments):
@@ -639,6 +650,10 @@ def constructXMLbloc(block, variables, listeArguments, retour):
                         # there is only an adress
                         nom_fonction = parts[2]
                         instruction_XML = ET.Element("Call")
+                        if nom_fonction.startswith("_$") or nom_fonction.startswith("_T"):
+                            nom_fonction = demangleSwift(nom_fonction)
+                        else:
+                            nom_fonction = demangleObjc(nom_fonction)
                         instruction_XML.set('func', nom_fonction)
                         if (parts[0] in listeArguments):
                             for arg in listeArguments[parts[0]]:
