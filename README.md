@@ -3,7 +3,7 @@ This repository contains work concerning the final graduation project
 
 > This tool is a desktop application developed by Bilal Belli.
 
-> The goal is to automate the semi-automated process of detecting vulnerabilities on iOS applications.
+> The goal is to automate the process of detecting some malicious behaviors on iOS applications using binary code analysis.
 
 ## Demo
 
