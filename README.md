@@ -5,7 +5,13 @@ This repository contains work concerning the final graduation project
 
 > The goal is to automate the process of detecting some malicious behaviors on iOS applications using binary code analysis.
 
-## Demo
+## Demo (video)
+
+<div align="center">
+   <video width="514" alt="demoVideo" src="https://github.com/user-attachments/assets/9bbc0ca8-54dd-4f30-b7eb-b1c23826d337">
+</div>
+
+## Demo (steps)
 
 ### First: Launch the tool, then select the directory that contains the iOS mobile applications to be analyzed (in this case 2 iOS applications exist in the selected directory).
 <div align="center">
