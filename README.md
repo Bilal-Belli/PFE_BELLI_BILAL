@@ -1,4 +1,4 @@
-# PFE_BELLI_BILAL : Tool for iOS Applications Analysis
+# Tool for iOS Applications Analysis
 This repository contains work concerning the final graduation project 
 
 > This tool is a desktop application developed by Bilal Belli.
