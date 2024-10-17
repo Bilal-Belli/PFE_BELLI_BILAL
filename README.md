@@ -32,6 +32,11 @@ This repository contains work concerning the final graduation project
    <img width="514" alt="demo4" src="https://github.com/user-attachments/assets/17a4d0e4-18fa-4c6c-a3f7-1dda4257dac0">
 </div>
 
+## Architecture
+<div align="center">
+   <img  alt="demo4" src="https://github.com/user-attachments/assets/798188c6-9822-4ee0-b849-ac0ad2245630">
+</div>
+
 ## Technologies
 ``Python`` , ``Tkinter`` , ``Radare2`` , ``Otool`` , ``cpp-demangle``
 ## Guide to run
